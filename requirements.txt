@@ -1,0 +1,10 @@
+# GridMind runtime and test dependencies (approved stack only).
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+networkx>=3.2
+streamlit>=1.30
+plotly>=5.18
+matplotlib>=3.8
+PyYAML>=6.0
+pytest>=7.4

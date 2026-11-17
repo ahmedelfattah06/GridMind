@@ -1,0 +1,40 @@
+# GridMind - official scenario catalogue (Team A3)
+# -----------------------------------------------------------------------------
+# Owner: A3 (Events, Tests, Scope Guard).
+# Status: SKELETON. Only the five official scenario keys are fixed; the event
+# lists are intentionally empty.
+#
+# TODO(A3): define and calibrate the events of each scenario (start step,
+# duration, demand_multiplier, capacity_factor, cloud_override). Do not invent
+# timings or intensities here: the open decision is recorded as PD-01 in
+# docs/decision_log.md and must be agreed before the experiments.
+#
+# An event is active on the half-open step interval [start, start + duration).
+# Supported parameters (see core/events.py and config/default.yaml):
+#   demand_multiplier: mapping of consumer type or agent id -> factor
+#   capacity_factor:   mapping of producer type or agent id -> factor
+#   cloud_override:    cloud cover in [0, 1] applied while the event is active
+#
+# Only the five official scenarios are allowed; do not invent additional ones.
+# -----------------------------------------------------------------------------
+
+scenarios:
+  normal:
+    description: Baseline operation without disruptions.
+    events: []
+
+  plant_outage:
+    description: One power plant trips offline for part of the run.
+    events: []
+
+  demand_spike:
+    description: Demand rises sharply for part of the run.
+    events: []
+
+  weather_shift:
+    description: Cloud cover and wind availability change for part of the run.
+    events: []
+
+  combined:
+    description: Several disruptions overlap.
+    events: []

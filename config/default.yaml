@@ -1,0 +1,159 @@
+# GridMind - default simulation configuration
+# -----------------------------------------------------------------------------
+# All tunable parameters of the simulation live in this file. Code must not
+# hard-code business values. Values marked as "specification" are fixed by the
+# official GridMind project specification and are validated by core/config.py.
+# -----------------------------------------------------------------------------
+
+project:
+  name: GridMind
+  version: "0.1.0"
+
+# Specification: 168 steps (7 days), each step is one hour, at most 3 rounds.
+simulation:
+  steps: 168
+  horizon: 6
+  rounds: 3
+  max_agents: 20
+
+# Double auction market parameters (Team B3 owns the market logic).
+market:
+  mechanism: double_auction
+  raise_factor: 1.2
+  producer_step: 0.05
+  initial_markup: 0.2
+
+# Value of lost load, in currency units per MWh (Team B1/B3 own the usage).
+voll:
+  hospital: 1000
+  residential: 100
+  factory: 40
+
+# Bidding price ceilings per consumer type, in currency units per MWh.
+max_prices:
+  hospital: 300
+  residential: 120
+  factory: 80
+  flex: 50
+
+# Generation fleet. Solar and wind output is weather driven; thermal and
+# peaker output is capacity * capacity_factor.
+producers:
+  - type: solar
+    count: 1
+    capacity_mw: 40
+    marginal_cost: 5
+  - type: wind
+    count: 1
+    capacity_mw: 30
+    marginal_cost: 8
+  - type: thermal
+    count: 1
+    capacity_mw: 50
+    marginal_cost: 45
+    capacity_factor: 1.0
+  - type: peaker
+    count: 1
+    capacity_mw: 20
+    marginal_cost: 90
+    capacity_factor: 1.0
+
+# Demand fleet. base_mw is the nominal load of a single agent of that type.
+consumers:
+  - type: hospital
+    count: 2
+    base_mw: 6
+    flexibility: 0.0
+  - type: residential
+    count: 4
+    base_mw: 8
+    flexibility: 0.1
+  - type: factory
+    count: 3
+    base_mw: 10
+    flexibility: 0.2
+
+# Storage fleet. initial_soc is a documented pending decision (see
+# docs/decision_log.md) because the specification does not define it.
+storage:
+  - type: battery
+    count: 2
+    capacity_mwh: 20
+    max_rate_mw: 5
+    efficiency: 0.95
+    initial_soc: 0.5
+
+# -----------------------------------------------------------------------------
+# Environment parameters (Team A2). Every constant used by core/weather.py,
+# core/demand.py and core/supply.py must be defined here.
+# -----------------------------------------------------------------------------
+environment:
+  weather:
+    temperature:
+      base_c: 27
+      amplitude_c: 8
+      peak_shift_hour: 9
+      day_offset_std_c: 2
+    cloud:
+      persistence: 0.8
+      noise_low: 0.2
+      noise_high: 1.0
+      initial: 0.8
+      min: 0.05
+      max: 1.0
+    wind:
+      persistence: 0.9
+      noise_low: 0.0
+      noise_high: 1.0
+      initial: 0.5
+    solar_window:
+      start_hour: 6
+      duration_hours: 12
+
+  demand:
+    # Normalised residential load profile. Windows are [start, end) and may
+    # wrap around midnight (night).
+    profile:
+      night: 0.6
+      morning: 1.2
+      midday: 0.8
+      evening: 1.4
+    windows:
+      night:
+        start: 22
+        end: 7
+      morning:
+        start: 7
+        end: 9
+      midday:
+        start: 9
+        end: 18
+      evening:
+        start: 18
+        end: 22
+    comfort_temperature_c: 25
+    temperature_sensitivity: 0.02
+    noise_std:
+      residential: 0.05
+      factory: 0.03
+      hospital: 0.02
+    factory_work_window:
+      start: 8
+      end: 18
+    factory_off_factor: 0.4
+
+# Experimental design. 4 systems x 5 scenarios x 30 seeds = 600 experiments.
+experiments:
+  systems:
+    - central_6h
+    - central_1h
+    - auction
+    - auction_q
+  scenarios:
+    - normal
+    - plant_outage
+    - demand_spike
+    - weather_shift
+    - combined
+  seeds: 30
+  seed_start: 0

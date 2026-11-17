@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/
+
+# Experiment artefacts (keep the folder structure)
+results/*.csv
+results/*.json
+results/*.parquet
+results/runs/
+results/figures/*
+!results/figures/.gitkeep
+
+# Local configuration overrides
+config/local.yaml
