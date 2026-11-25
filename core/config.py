@@ -70,6 +70,10 @@ STREAM_WEATHER_TEMPERATURE = 2
 STREAM_DEMAND = 100
 STREAM_AGENT_BASE = 1_000
 AGENT_STREAM_RANGE = 1_000_000
+# Forecast errors are a separate stream from the realised environment draws.
+# Sharing one stream would make each consumer's "forecast" an exact function of
+# the shock that the environment actually applies in the same hour.
+STREAM_AGENT_FORECAST_BASE = 2_000_000
 
 REQUIRED_SECTIONS: tuple[str, ...] = (
     "project",
@@ -151,6 +155,29 @@ def derive_agent_rng(seed: int, agent_id: str) -> np.random.Generator:
     """
 
     return derive_rng(seed, agent_stream_index(agent_id))
+
+
+def derive_agent_forecast_rng(seed: int, agent_id: str) -> np.random.Generator:
+    """Create an agent-owned generator for forecast errors.
+
+    The realised demand of an agent is drawn by :class:`core.demand.DemandModel`
+    from :func:`derive_agent_rng`. A consumer that also used that generator for
+    its forecast error would observe, in the same hour, the exact standard
+    normal shock that produced its realised demand. This helper puts forecast
+    errors in a disjoint namespace so the forecast is genuinely uncertain.
+
+    Args:
+        seed: Main simulation seed.
+        agent_id: Stable agent identifier.
+
+    Returns:
+        A NumPy generator seeded from the agent's forecast stream.
+
+    Raises:
+        ValueError: If ``seed`` or ``agent_id`` is invalid.
+    """
+
+    return derive_rng(seed, STREAM_AGENT_FORECAST_BASE + agent_stream_index(agent_id))
 
 
 def load_config(

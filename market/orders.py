@@ -26,7 +26,9 @@ class Order:
         side: ``"buy"`` for demand, ``"sell"`` for supply.
         qty_mw: Requested energy for this hour, in MW. Must be positive.
         price: Limit price in currency units per MWh. Must be non-negative.
-        priority: Higher values are served first. Defaults to ``0``.
+        priority: Lower values are served first. Consumers use hospital
+            ``1``, residential ``2``, factory ``3`` and flexible ``4``;
+            producers and storage use ``4``. Defaults to ``0``.
         round: Negotiation round in which the order was submitted, starting
             at ``1``.
     """

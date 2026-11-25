@@ -42,6 +42,11 @@ LOG_COLUMNS: tuple[str, ...] = (
 # Dynamic per-agent columns. The logger never assumes a fixed fleet size.
 UE_PREFIX = "ue_"
 SOC_PREFIX = "soc_"
+DEFERRED_PREFIX = "deferred_"
+GENERATION_PREFIX = "generation_"
+BOUGHT_PREFIX = "bought_"
+SOLD_PREFIX = "sold_"
+PAID_PREFIX = "paid_"
 
 DETAIL_COLUMNS: tuple[str, ...] = (
     "t",
@@ -160,8 +165,25 @@ class SimulationLogger:
         }
         for agent_id, value in result.unserved.items():
             row[f"{UE_PREFIX}{agent_id}"] = float(value)
+        for agent_id, value in result.deferred.items():
+            row[f"{DEFERRED_PREFIX}{agent_id}"] = float(value)
+        for agent_id, value in result.generation.items():
+            row[f"{GENERATION_PREFIX}{agent_id}"] = float(value)
         for agent_id, value in result.soc.items():
             row[f"{SOC_PREFIX}{agent_id}"] = float(value)
+        for trade in result.trades:
+            row[f"{BOUGHT_PREFIX}{trade.buyer_id}"] = row.get(
+                f"{BOUGHT_PREFIX}{trade.buyer_id}", 0.0
+            ) + float(trade.qty_mw)
+            row[f"{SOLD_PREFIX}{trade.seller_id}"] = row.get(
+                f"{SOLD_PREFIX}{trade.seller_id}", 0.0
+            ) + float(trade.qty_mw)
+            row[f"{PAID_PREFIX}{trade.buyer_id}"] = row.get(
+                f"{PAID_PREFIX}{trade.buyer_id}", 0.0
+            ) + float(trade.qty_mw) * float(trade.price)
+            row[f"{PAID_PREFIX}{trade.seller_id}"] = row.get(
+                f"{PAID_PREFIX}{trade.seller_id}", 0.0
+            ) - float(trade.qty_mw) * float(trade.price)
         return row
 
     def _register_columns(self, row: dict[str, Any]) -> None:

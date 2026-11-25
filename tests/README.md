@@ -1,9 +1,8 @@
-# GridMind test suite - ownership and activation
+# GridMind test suite - ownership and coverage
 
-This directory is prepared for parallel development. Tests that depend on a
-component which is still an interface skeleton are **skipped on purpose** with
-an explicit reason naming the owning team. No test is hidden or silently
-deleted: the assertions stay in place as the acceptance criteria for the owner.
+All official components are implemented, so the suite runs without skips. The
+assertions that were originally written as acceptance criteria for each owner are
+now active tests against the real modules.
 
 Run everything:
 
@@ -11,45 +10,42 @@ Run everything:
 pytest
 ```
 
-Run only the currently active suites:
-
-```bat
-pytest tests/test_config.py tests/test_clock.py tests/test_contracts.py
-```
-
 ## Ownership and status
 
-| File | Owner | Status now | Activates when |
-| --- | --- | --- | --- |
-| `conftest.py` | A3 (shared fixtures) | active | - |
-| `test_config.py` | A1 config, A3 scope guard | active | - (the D2 grid test is skipped) |
-| `test_clock.py` | A1 | active | - |
-| `test_contracts.py` | shared contracts | active | - |
-| `test_environment.py` | A2, A3 for modifiers | skipped (`TODO(A2/A3)`) | weather, demand, supply and modifiers are implemented |
-| `test_model.py` | A1, A3 for orchestration contracts | skipped (`TODO(A2/B1/B2/B3)`) | environment plus one injected agent/market stack exist |
-| `test_reproducibility.py` | A1, A3 | skipped (`TODO(A2/B/C)`) | a complete official-mode run is available |
+| File | Owner | Status |
+| --- | --- | --- |
+| `conftest.py` | A3 (shared fixtures) | active |
+| `test_config.py` | A1 config, A3 scope guard, D2 grid | active |
+| `test_clock.py` | A1 | active |
+| `test_contracts.py` | shared contracts | active |
+| `test_environment.py` | A2, A3 for modifiers | active |
+| `test_model.py` | A1, A3 for orchestration contracts | active |
+| `test_reproducibility.py` | A1, A3 | active |
+| `test_agents.py` | B1, B2 | active |
+| `test_market.py` | B3, C1 adapter | active |
+| `test_ai.py` | C1 planner, C2 Q-learning and training | active |
+| `test_experiments.py` | D2 | active |
+| `test_factory.py` | A1 factory and fleet resizing | active |
 
-## Activation rules
+## Rules
 
-1. The owning team implements its modules and replaces the `NotImplementedError`
-   placeholders.
-2. The owner removes the module-level `pytestmark` skip (or the single
-   `@pytest.mark.skip` on the D2 grid test) and runs the suite locally.
-3. The suite must pass without weakening assertions. If an assertion encodes an
-   assumption that was not agreed, raise it as a decision-log entry instead of
-   deleting the test.
-4. Contract changes require the approvals listed in `docs/contracts.md`.
-
-## What these tests must not do
-
-* They must not use fake agents, auctions, LPs or Q-tables to make a run appear
-  complete.
-* They must not require unfinished Team B/C/D functionality.
-* They must not change the frozen interfaces to fit an implementation.
+1. Tests use the real production components; only `mock` mode is allowed to use
+   the labelled orchestration doubles.
+2. A failing assertion must be fixed in the implementation or raised as a
+   decision-log entry, never silenced without agreement.
+3. Contract changes require the approvals listed in `docs/contracts.md`.
+4. Tests must not fabricate simulation or experiment results.
 
 ## Current scope
 
-* Active tests cover configuration loading/validation, clock arithmetic and the
-  frozen `Order`, `Trade` and `StepResult` structures.
-* Pending tests are the agreed acceptance criteria for A2, A3 and the
-  orchestration path. They are intentionally not executed yet.
+* Configuration, clock and the frozen `Order`, `Trade` and `StepResult`
+  structures.
+* Weather, demand, supply and event modifiers.
+* Full `GridModel` orchestration and energy conservation with the real auction.
+* Deterministic reproducibility of complete official-mode runs.
+* Consumer, producer and storage behaviour, including SoC limits and policies.
+* Double auction, settlement, negotiation validation and central LP dispatch.
+* Q-table discretisation, updates, persistence and a short training run.
+* Metrics, bootstrap intervals, Wilcoxon comparisons, grid construction, one
+  end-to-end runner execution and report generation.
+* Model factory wiring for all four official systems and fleet resizing.

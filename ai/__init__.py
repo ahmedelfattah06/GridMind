@@ -1,1 +1,1 @@
-"""AI package: central linear programming and tabular Q-learning placeholders."""
+"""AI package: central linear programming and tabular Q-learning."""

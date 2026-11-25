@@ -1,16 +1,14 @@
-"""Base agent interface (Team B1) - interface skeleton.
+"""Base agent contract (Team B1).
 
-Owner: B1 (Consumer Agents and Base Agent).
-Status: TODO. No agent behaviour is implemented in this skeleton.
+Every GridMind agent implements the frozen interface from ``docs/contracts.md``:
 
-Responsibilities to implement:
+* ``observe(obs)`` once per step, before any decision;
+* ``decide(round)`` once per negotiation round;
+* ``update(result)`` once per step, after settlement;
+* ``snapshot()`` for logging and the dashboard.
 
-* ``observe(obs)``: consume the observation documented in ``docs/contracts.md``,
-* ``decide(round)``: return the orders of one negotiation round,
-* ``update(result)``: consume the settlement of the step,
-* ``snapshot()``: expose the public agent state for logging and the UI.
-
-The interface is frozen in ``docs/contracts.md`` (section "Agent contract").
+The base class stores the common observation and settlement state. Concrete
+agents own their decision rules; no market logic lives here.
 """
 
 from __future__ import annotations
@@ -22,14 +20,14 @@ from market.orders import Order
 
 
 class BaseAgent(ABC):
-    """Common contract for every GridMind agent.
+    """Common contract and state for every GridMind agent."""
 
-    The constructor only stores the identity fields of the frozen contract so
-    that subclasses remain constructible. Agent state and behaviour belong to
-    the owning team.
-    """
-
-    def __init__(self, agent_id: str, role: str, agent_type: str) -> None:
+    def __init__(
+        self,
+        agent_id: str,
+        role: str,
+        agent_type: str,
+    ) -> None:
         """Create the agent.
 
         Args:
@@ -37,13 +35,26 @@ class BaseAgent(ABC):
             role: ``"consumer"``, ``"producer"`` or ``"storage"``.
             agent_type: Concrete type, for example ``"hospital"`` or ``"solar"``.
 
-        TODO(B1): define the validation rules and the state initialisation of
-        the base agent.
+        Raises:
+            ValueError: If an identity field is empty or the role is unknown.
         """
 
+        if not isinstance(agent_id, str) or not agent_id.strip():
+            raise ValueError("agent_id must be a non-empty string")
+        if role not in ("consumer", "producer", "storage"):
+            raise ValueError(f"unknown agent role {role!r}")
+        if not isinstance(agent_type, str) or not agent_type.strip():
+            raise ValueError("agent_type must be a non-empty string")
         self._agent_id = agent_id
         self._role = role
         self._agent_type = agent_type
+
+        self._observation: dict[str, Any] | None = None
+        self._last_result: dict[str, Any] | None = None
+        self._last_price = 0.0
+        self._t = 0
+        self._hour = 0
+        self._day = 0
 
     @property
     def agent_id(self) -> str:
@@ -63,16 +74,37 @@ class BaseAgent(ABC):
 
         return self._agent_type
 
+    @property
+    def observation(self) -> dict[str, Any] | None:
+        """Most recent observation, exposed for tests and the dashboard."""
+
+        return self._observation
+
+    @property
+    def last_result(self) -> dict[str, Any] | None:
+        """Most recent settlement payload."""
+
+        return self._last_result
+
     def observe(self, obs: dict[str, Any]) -> None:
         """Receive the observation of the current step.
 
         Args:
             obs: Model observation, see ``docs/contracts.md``.
 
-        TODO(B1): store and interpret the observation.
+        Raises:
+            ValueError: If the observation does not contain the required keys.
         """
 
-        raise NotImplementedError("TODO(B1): implement BaseAgent.observe")
+        for key in ("t", "hour", "day", "environment", "last_price"):
+            if key not in obs:
+                raise ValueError(f"observation is missing required key {key!r}")
+        self._observation = obs
+        self._t = int(obs["t"])
+        self._hour = int(obs["hour"])
+        self._day = int(obs["day"])
+        self._last_price = float(obs["last_price"])
+        self._on_observe(obs)
 
     @abstractmethod
     def decide(self, round: int) -> list[Order]:
@@ -90,39 +122,89 @@ class BaseAgent(ABC):
 
         Args:
             result: Agent specific settlement, see ``docs/contracts.md``.
-
-        TODO(B1): store and interpret the settlement.
         """
 
-        raise NotImplementedError("TODO(B1): implement BaseAgent.update")
+        self._last_result = dict(result)
+        self._last_price = float(result.get("price", self._last_price))
+        self._on_update(result)
 
     def snapshot(self) -> dict[str, Any]:
-        """Return the public state of the agent for logging and the UI.
+        """Return the public state of the agent for logging and the UI."""
 
-        TODO(B1): return at least ``agent_id``, ``role`` and ``type``.
-        """
+        return {
+            "agent_id": self.agent_id,
+            "role": self.role,
+            "type": self.agent_type,
+        }
 
-        raise NotImplementedError("TODO(B1): implement BaseAgent.snapshot")
+    # ------------------------------------------------------------------
+    # Hooks for concrete agents
+    # ------------------------------------------------------------------
+
+    def _on_observe(self, obs: dict[str, Any]) -> None:
+        """Interpret an observation. Subclasses override this hook."""
+
+    def _on_update(self, result: dict[str, Any]) -> None:
+        """Interpret a settlement. Subclasses override this hook."""
 
 
 class MockAgent(BaseAgent):
-    """Removed orchestration stub, kept only for import compatibility.
+    """Labelled orchestration-only agent for ``mode="mock"``.
 
-    ``core/model.py`` imports this symbol. The bootstrap mock implemented a
-    placeholder bidding policy, which the skeleton phase does not allow. Team
-    B must supply real agents through dependency injection instead.
-
-    TODO(B1): delete this class once ``GridModel`` no longer imports it, or
-    replace it with a real agent implementation.
+    The mock mode is not used for experiments. This implementation exists so
+    that the frozen constructor remains usable for smoke tests and never
+    raises a placeholder exception.
     """
 
     def __init__(self, spec: Mapping[str, Any]) -> None:
-        raise NotImplementedError(
-            "TODO(B1): MockAgent was removed in the skeleton phase; "
-            "inject real agents via GridModel(..., agents=[...])"
+        """Create the mock agent from a resolved specification."""
+
+        self._spec = dict(spec)
+        super().__init__(
+            agent_id=str(spec["id"]),
+            role=str(spec["role"]),
+            agent_type=str(spec["type"]),
         )
 
-    def decide(self, round: int) -> list[Order]:
-        """Not implemented; see :class:`BaseAgent`."""
+    def _on_observe(self, obs: dict[str, Any]) -> None:
+        environment = obs["environment"]
+        if self.role == "producer":
+            self._available_mw = float(environment["generation_mw"].get(self.agent_id, 0.0))
+        elif self.role == "consumer":
+            self._available_mw = float(environment["demand_mw"].get(self.agent_id, 0.0))
+        else:
+            self._available_mw = 0.0
 
-        raise NotImplementedError("TODO(B1): implement real agent decisions")
+    def decide(self, round: int) -> list[Order]:
+        """Submit a simple order; this is not an experimental component."""
+
+        quantity = float(getattr(self, "_available_mw", 0.0))
+        if quantity <= 0.0:
+            return []
+        if self.role == "producer":
+            price = float(self._spec.get("marginal_cost", 1.0)) * 1.2
+            side = "sell"
+            priority = 4
+        elif self.role == "consumer":
+            price = float(self._spec.get("max_price", 100.0))
+            side = "buy"
+            priority = {"hospital": 1, "residential": 2, "factory": 3}.get(self.agent_type, 3)
+        else:
+            return []
+        return [
+            Order(
+                agent_id=self.agent_id,
+                side=side,
+                qty_mw=quantity,
+                price=price,
+                priority=priority,
+                round=round,
+            )
+        ]
+
+    def snapshot(self) -> dict[str, Any]:
+        """Return the common snapshot plus mock availability."""
+
+        payload = super().snapshot()
+        payload["available_mw"] = float(getattr(self, "_available_mw", 0.0))
+        return payload

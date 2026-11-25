@@ -1,1 +1,1 @@
-"""Experiment package: runner, metrics, statistics and plots placeholders."""
+"""Experiment package: runner, metrics, statistics, plots and report."""

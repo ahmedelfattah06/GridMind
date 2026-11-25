@@ -2,11 +2,10 @@
 
 Owner: A1.
 
-The tests use the isolated doubles in ``tests/doubles.py``. They deliberately
-do not implement or replace the official A2/A3/B/C logic: they only prove that
-A1 drives the frozen interfaces in the correct order. Integration tests that
-need the real auction, settlement or LP are marked as integration-blocked at the
-bottom of this file.
+The tests use the isolated doubles in ``tests/doubles.py`` for orchestration
+mechanics and the real factory for integration acceptance checks. They do not
+replace the official A2/A3/B/C logic: they prove that A1 drives the frozen
+interfaces in the correct order and that the real components conserve energy.
 """
 
 from __future__ import annotations
@@ -19,7 +18,9 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from core.config import resolve_agent_specs
+from agents.storage import StoragePolicy
+from core.config import load_config, resolve_agent_specs
+from core.factory import build_model as build_real_model
 from core.logger import LOG_COLUMNS, SOC_PREFIX, UE_PREFIX
 from core.model import GridModel, StepResult
 from market.orders import Order
@@ -210,7 +211,7 @@ def test_unknown_mode_raises(config: dict[str, Any]) -> None:
 
 def test_official_modes_need_injected_components(config: dict[str, Any]) -> None:
     for mode in ("central", "central_6h", "central_1h", "auction", "auction_q"):
-        with pytest.raises(NotImplementedError, match="requires real agents"):
+        with pytest.raises(RuntimeError, match="requires real agents"):
             GridModel(config, 0, mode=mode)
 
 
@@ -399,12 +400,92 @@ def test_logged_soc_reflects_the_post_update_agent_state(
         )
 
 
-@pytest.mark.skip(
-    reason=(
-        "Integration blocked: energy conservation with the official B3 auction and "
-        "settlement requires market/auction.py to be implemented; A1 is verified "
-        "against an isolated balanced settlement double instead."
-    )
-)
 def test_energy_conservation_with_real_market() -> None:
-    """Acceptance test for the B3 integration phase."""
+    """Acceptance test for the B3 integration phase.
+
+    Every MW of metered demand is either traded, deferred as flexible energy or
+    left unserved, and settlement payments are zero-sum.
+    """
+
+    config = load_config()
+    model = build_real_model(config, seed=7, mode="auction")
+    consumers = {
+        str(spec["id"]) for spec in resolve_agent_specs(config) if spec["role"] == "consumer"
+    }
+
+    for _ in range(24):
+        result = model.step()
+        bought: dict[str, float] = {}
+        sold: dict[str, float] = {}
+        for trade in result.trades:
+            assert trade.qty_mw > 0.0
+            bought[trade.buyer_id] = bought.get(trade.buyer_id, 0.0) + trade.qty_mw
+            sold[trade.seller_id] = sold.get(trade.seller_id, 0.0) + trade.qty_mw
+
+        context = model._build_market_context(model._environment.state)  # noqa: SLF001
+        total_demand = 0.0
+        served_demand = 0.0
+        for agent_id, demand in context.demand_mw.items():
+            total_demand += demand
+            bought_mw = bought.get(agent_id, 0.0)
+            shortfall = max(0.0, demand - bought_mw)
+            served_demand += min(bought_mw, demand)
+            assert result.unserved[agent_id] + result.deferred[agent_id] == pytest.approx(
+                shortfall, abs=1e-6
+            )
+            assert result.unserved[agent_id] >= 0.0
+            assert result.deferred[agent_id] >= 0.0
+
+        assert sum(trade.qty_mw for trade in result.trades) == pytest.approx(
+            sum(bought.values())
+        )
+        assert served_demand + sum(result.deferred.values()) + sum(
+            result.unserved.values()
+        ) == pytest.approx(total_demand, abs=1e-6)
+        assert set(result.unserved) == consumers
+        assert set(sold).issubset(
+            {str(spec["id"]) for spec in resolve_agent_specs(config)}
+        )
+        assert sum(sold.values()) == pytest.approx(sum(bought.values()))
+
+        settlement = model._market.last_settlement  # noqa: SLF001 - acceptance check
+        assert sum(settlement.payments.values()) == pytest.approx(0.0, abs=1e-6)
+
+
+def test_storage_policy_observation_includes_the_latest_clearing_price() -> None:
+    """The 24 hour mean must be current when the policy is queried.
+
+    ``_build_observations`` snapshots the agents before ``observe``. The price
+    history therefore has to be advanced during ``update`` at the end of the
+    previous step, otherwise every policy observation lags by one hour.
+    """
+
+    class RecordingPolicy(StoragePolicy):
+        def __init__(self) -> None:
+            self.observations: list[dict[str, Any]] = []
+
+        def act(self, obs: dict[str, Any]) -> int:
+            self.observations.append(dict(obs))
+            return 0
+
+    config = load_config()
+    created: list[RecordingPolicy] = []
+
+    def factory(spec: Any, cfg: Any, seed: int) -> RecordingPolicy:
+        policy = RecordingPolicy()
+        created.append(policy)
+        return policy
+
+    model = build_real_model(
+        config, seed=0, mode="auction", policy_factory=factory
+    )
+    model.step()
+    model.step()
+
+    prices = model.logger.get_log()["price"].tolist()
+    assert len(created) == 2
+    for policy in created:
+        assert policy.observations[0]["own_agent"]["avg_price_24h"] == pytest.approx(0.0)
+        assert policy.observations[1]["own_agent"]["avg_price_24h"] == pytest.approx(
+            prices[0]
+        )
