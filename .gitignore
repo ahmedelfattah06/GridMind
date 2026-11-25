@@ -7,19 +7,31 @@ dist/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.log
 
 # Virtual environments
 .venv/
 venv/
 env/
 
-# Tooling
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Tooling and OS files
 .idea/
 .vscode/
+.ipynb_checkpoints/
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Streamlit (keep the shared dark theme, ignore local secrets)
+# Streamlit (keep the shared theme, ignore local secrets)
 .streamlit/*
 !.streamlit/config.toml
 
@@ -27,8 +39,9 @@ Thumbs.db
 qtable.npy
 results/*.csv
 results/*.json
-results/*.parquet
+results/*.log
 results/*.npy
+results/*.parquet
 results/*.txt
 results/runs/
 results/smoke/
