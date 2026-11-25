@@ -83,6 +83,26 @@ storage:
     efficiency: 0.95
     initial_soc: 0.5
 
+# Fixed-price battery rule (Team B2 baseline). The Q-learning policy uses the
+# same action interface, so the two policies are interchangeable.
+storage_policy:
+  low_price_ratio: 0.85
+  high_price_ratio: 1.15
+
+# Tabular Q-learning for the storage agent (Team C2). Values are fixed by the
+# project guide section 7.3; they remain configurable for reproducibility.
+qlearning:
+  episodes: 2000
+  alpha: 0.1
+  gamma: 0.95
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_episodes: 1500
+  training_seed_start: 1000
+  soc_bins: 5
+  price_bins: 3
+  periods: 4
+
 # -----------------------------------------------------------------------------
 # Environment parameters (Team A2). Every constant used by core/weather.py,
 # core/demand.py and core/supply.py must be defined here.

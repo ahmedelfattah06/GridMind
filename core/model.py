@@ -133,7 +133,7 @@ class GridModel:
 
         Raises:
             ValueError: If the config, mode, scenario or seed is invalid.
-            NotImplementedError: If an official mode is requested without the
+            RuntimeError: If an official mode is requested without the
                 components owned by another team.
         """
 
@@ -491,6 +491,7 @@ class GridModel:
         for trade in settlement.trades:
             bought[trade.buyer_id] = bought.get(trade.buyer_id, 0.0) + float(trade.qty_mw)
             sold[trade.seller_id] = sold.get(trade.seller_id, 0.0) + float(trade.qty_mw)
+        system_unserved = float(sum(settlement.unserved.values()))
 
         for agent in self._agents:
             agent_id = agent.agent_id
@@ -504,6 +505,7 @@ class GridModel:
                     "unserved_mw": float(settlement.unserved.get(agent_id, 0.0)),
                     "deferred_mw": float(settlement.deferred.get(agent_id, 0.0)),
                     "generation_mw": float(state.generation_mw.get(agent_id, 0.0)),
+                    "system_unserved_mw": system_unserved,
                     "soc": float(state_of_charge.get(agent_id, 0.0)),
                 }
             )
@@ -516,7 +518,7 @@ class GridModel:
             soc = getattr(agent, "state_of_charge", None)
             if soc is None:
                 # The frozen contract guarantees ``soc`` in Agent.snapshot();
-                # the property is only a convenience used by the skeleton.
+                # the property is only a convenience used by the implementation.
                 soc = agent.snapshot().get("soc")
             if soc is not None:
                 state_of_charge[agent.agent_id] = float(soc)
@@ -553,7 +555,7 @@ class GridModel:
                     )
             return resolved
         if self._mode != MOCK_MODE:
-            raise NotImplementedError(
+            raise RuntimeError(
                 f"mode {self._mode!r} requires real agents owned by Team B1/B2; "
                 "inject them with GridModel(..., agents=[...])"
             )
@@ -567,7 +569,7 @@ class GridModel:
         if market is not None:
             return market
         if self._mode != MOCK_MODE:
-            raise NotImplementedError(
+            raise RuntimeError(
                 f"mode {self._mode!r} requires a market implementation owned by Team B3 "
                 "(auction modes) or Team C1 (central modes); inject it with "
                 "GridModel(..., market=...)"
@@ -589,7 +591,7 @@ class GridModel:
                 )
             return negotiation
         if self._mode != MOCK_MODE:
-            raise NotImplementedError(
+            raise RuntimeError(
                 f"mode {self._mode!r} requires a negotiation protocol owned by Team B3; "
                 "inject it with GridModel(..., negotiation=...)"
             )

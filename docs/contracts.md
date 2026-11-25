@@ -1,9 +1,14 @@
 # GridMind Integration Contracts
 
-**Version:** 1.0 (frozen at bootstrap; skeleton phase)
+**Version:** 1.0 (frozen at bootstrap)
 **Owner:** A1 (core model), in agreement with all four team leads
-**Status:** frozen. Any change requires approval from A1, B1, C1 and D1 (one lead
-per team) and a new version number in this document.
+**Status:** frozen and implemented. Any change requires approval from A1, B1, C1
+and D1 (one lead per team) and a new version number in this document.
+
+> **Implementation note:** the component descriptions below were written during
+> the bootstrap phase and mention skeletons and `TODO` notes. Those placeholders
+> have since been replaced by real implementations; the interfaces themselves
+> are unchanged. See `core/factory.py` for the assembly of every official mode.
 
 This document is the single reference for every interface that crosses a team
 boundary. Code that violates these contracts is a bug even if it works locally.
@@ -121,7 +126,7 @@ class Order:
     side: Literal["buy", "sell"]
     qty_mw: float      # > 0
     price: float       # >= 0, currency per MWh
-    priority: int = 0  # higher served first
+    priority: int = 0  # lower served first (hospital 1 ... flexible 4)
     round: int = 1     # >= 1
 
 @dataclass(frozen=True)

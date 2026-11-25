@@ -1,16 +1,12 @@
 # GridMind - official scenario catalogue (Team A3)
 # -----------------------------------------------------------------------------
 # Owner: A3 (Events, Tests, Scope Guard).
-# Status: SKELETON. Only the five official scenario keys are fixed; the event
-# lists are intentionally empty.
-#
-# TODO(A3): define and calibrate the events of each scenario (start step,
-# duration, demand_multiplier, capacity_factor, cloud_override). Do not invent
-# timings or intensities here: the open decision is recorded as PD-01 in
-# docs/decision_log.md and must be agreed before the experiments.
 #
 # An event is active on the half-open step interval [start, start + duration).
-# Supported parameters (see core/events.py and config/default.yaml):
+# Timings and intensities follow section 8 of the GridMind project guide:
+#   day 3 = steps 72..95, hour 14 = step 86.
+#
+# Supported parameters (see core/events.py):
 #   demand_multiplier: mapping of consumer type or agent id -> factor
 #   capacity_factor:   mapping of producer type or agent id -> factor
 #   cloud_override:    cloud cover in [0, 1] applied while the event is active
@@ -24,17 +20,48 @@ scenarios:
     events: []
 
   plant_outage:
-    description: One power plant trips offline for part of the run.
-    events: []
+    description: The thermal plant trips to 30 % capacity for 12 hours.
+    events:
+      - name: thermal_outage
+        start: 86
+        duration: 12
+        params:
+          capacity_factor:
+            thermal: 0.3
 
   demand_spike:
-    description: Demand rises sharply for part of the run.
-    events: []
+    description: Residential demand rises by 40 % for six hours.
+    events:
+      - name: residential_spike
+        start: 86
+        duration: 6
+        params:
+          demand_multiplier:
+            residential: 1.4
 
   weather_shift:
-    description: Cloud cover and wind availability change for part of the run.
-    events: []
+    description: Dense cloud and weak wind reduce renewable output for a day.
+    events:
+      - name: weather_shift
+        start: 72
+        duration: 24
+        params:
+          cloud_override: 0.2
+          capacity_factor:
+            wind: 0.5
 
   combined:
-    description: Several disruptions overlap.
-    events: []
+    description: A thermal outage and a residential demand spike overlap.
+    events:
+      - name: combined_outage
+        start: 86
+        duration: 12
+        params:
+          capacity_factor:
+            thermal: 0.3
+      - name: combined_spike
+        start: 86
+        duration: 6
+        params:
+          demand_multiplier:
+            residential: 1.4

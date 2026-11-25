@@ -265,7 +265,7 @@ class FakeAgent(BaseAgent):
         self._soc = float(spec.get("initial_soc", 0.0))
         self._available_mw = 0.0
         self._demand_mw = 0.0
-        self.observation: dict[str, Any] | None = None
+        self._observation: dict[str, Any] | None = None
         self.updates: list[dict[str, Any]] = []
 
     @property
@@ -274,7 +274,7 @@ class FakeAgent(BaseAgent):
 
     def observe(self, obs: dict[str, Any]) -> None:
         self._calls.append(f"agent.observe:{self.agent_id}")
-        self.observation = obs
+        self._observation = obs
         environment = obs["environment"]
         if self.role == "producer":
             self._available_mw = float(environment["generation_mw"].get(self.agent_id, 0.0))

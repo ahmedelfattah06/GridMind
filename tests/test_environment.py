@@ -1,12 +1,8 @@
 """Tests for weather, demand, supply and the environment composition.
 
 Owner: A2 (Environment), with A3 for the event modifiers.
-Status: PENDING. A2 and A3 currently ship interface skeletons, so this suite is
-skipped until they implement their modules. The assertions are kept as the
-agreed acceptance criteria for that work.
-
-Activation: remove ``pytestmark`` below once A2/A3 report the modules ready.
-See ``tests/README.md``.
+Status: ACTIVE. Weather, demand, supply and the event modifiers are implemented
+and these are their agreed acceptance criteria.
 """
 
 from __future__ import annotations
@@ -19,14 +15,6 @@ from core.config import resolve_agent_specs
 from core.demand import DemandModel
 from core.environment import Environment
 from core.events import EnvironmentModifiers
-
-pytestmark = pytest.mark.skip(
-    reason=(
-        "TODO(A2/A3): weather, demand, supply and event modifiers are interface "
-        "skeletons; see tests/README.md for the activation conditions"
-    )
-)
-
 
 def _specs(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {spec["id"]: spec for spec in resolve_agent_specs(config)}

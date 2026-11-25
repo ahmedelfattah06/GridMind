@@ -19,14 +19,19 @@ env/
 .DS_Store
 Thumbs.db
 
-# Streamlit
-.streamlit/
+# Streamlit (keep the shared dark theme, ignore local secrets)
+.streamlit/*
+!.streamlit/config.toml
 
 # Experiment artefacts (keep the folder structure)
+qtable.npy
 results/*.csv
 results/*.json
 results/*.parquet
+results/*.npy
+results/*.txt
 results/runs/
+results/smoke/
 results/figures/*
 !results/figures/.gitkeep
 

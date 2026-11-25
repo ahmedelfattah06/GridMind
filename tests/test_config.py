@@ -86,12 +86,13 @@ def test_agent_specs_carry_contract_values(config: dict[str, Any]) -> None:
 
 def test_scenario_catalogue_contains_five_official_scenarios(config: dict[str, Any]) -> None:
     assert tuple(config["scenarios"]) == OFFICIAL_SCENARIOS
-    # TODO(A3): the event lists are intentionally empty in the skeleton phase.
-    # Timing and intensity are open decision PD-01 in docs/decision_log.md.
-    assert all(scenario["events"] == [] for scenario in config["scenarios"].values())
+    # Team A3 calibrated all five scenarios. Normal is the only baseline without
+    # an event; the other four must carry at least one scheduled disruption.
+    assert config["scenarios"]["normal"]["events"] == []
+    for name in ("plant_outage", "demand_spike", "weather_shift", "combined"):
+        assert config["scenarios"][name]["events"], f"{name} has no scheduled event"
 
 
-@pytest.mark.skip(reason="TODO(D2): experiment grid enumeration is owned by Team D2")
 def test_experiment_grid_has_six_hundred_runs(config: dict[str, Any]) -> None:
     grid = build_experiment_grid(config)
     assert len(grid) == 600
@@ -185,8 +186,8 @@ def test_unknown_producer_type_raises(config_copy: dict[str, Any]) -> None:
 def _set_single_event(config: dict[str, Any], scenario: str, **event: Any) -> None:
     """Install one valid event so that scenario validation can be exercised.
 
-    The skeleton catalogue is empty on purpose; these tests only cover the
-    configuration validation owned by A1, not A3's event behaviour.
+    These tests only cover the configuration validation owned by A1; A3's event
+    behaviour is covered by ``test_environment.py``.
     """
 
     entry: dict[str, Any] = {
